@@ -32,6 +32,12 @@
     <!-- Tắt tối ưu pin -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Sinh trắc học / Vân tay -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission
+        android:name="android.permission.USE_FINGERPRINT"
+        tools:ignore="Deprecated" />
+
     <!-- Camera hardware feature (không bắt buộc) -->
     <uses-feature
         android:name="android.hardware.camera"
@@ -58,6 +64,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- BiometricPromptActivity - Mở khóa bằng vân tay -->
+        <activity
+            android:name=".ui.auth.BiometricPromptActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.LockApp.Translucent" />
 
         <!-- Foreground Service - Chạy ngầm giám sát app -->
         <service

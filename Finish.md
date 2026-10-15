@@ -126,11 +126,15 @@ LockApp/
 │           ├── ui/
 │           │   ├── theme/ (Color.kt, Theme.kt, Type.kt)
 │           │   ├── navigation/Navigation.kt
-│           │   └── screens/HomeScreen.kt
+│           │   ├── auth/ (BiometricAuthHelper.kt, BiometricPromptActivity.kt)
+│           │   └── screens/ (HomeScreen.kt, LockOverlayScreen.kt)
 │           ├── service/
 │           │   ├── LockService.kt
 │           │   ├── LockAccessibilityService.kt
-│           │   └── LockOverlayManager.kt
+│           │   ├── LockOverlayManager.kt
+│           │   └── OverlayLifecycleOwner.kt
+│           ├── camera/
+│           │   └── IntruderCaptureManager.kt
 │           ├── receiver/
 │           │   ├── LockAdminReceiver.kt
 │           │   └── BootReceiver.kt
@@ -149,22 +153,58 @@ LockApp/
 
 ---
 
+## ✅ Bước 2: Màn Hình Khóa & Cơ Chế Chụp Ảnh Ngầm (Giai đoạn 2)
+
+**Trạng thái:** ✅ Đã hoàn thành & Build APK thành công (`app-debug.apk`)!
+
+### Đã hoàn thành trong Bước 2:
+
+1. **Giao diện nhập PIN Overlay (`LockOverlayScreen.kt`)**:
+   - Thiết kế giao diện Jetpack Compose toàn màn hình phong cách Dark Slate sang trọng, hiện đại.
+   - Hiển thị động biểu tượng icon và tên ứng dụng đang bị khóa (lấy trực tiếp từ `PackageManager` & Coil).
+   - Chỉ báo PIN dots (4 số) với hiệu ứng đổi màu.
+   - Bàn phím số Numpad cảm ứng (0-9) cùng phản hồi xúc giác (Haptic Feedback) sống động.
+   - Hiệu ứng lắc rung ngang (Shake Animation) với viền đỏ khi nhập sai mã PIN.
+   - Nút "Trở về màn hình chính" (Home) giúp người dùng thoát an toàn về màn hình chính điện thoại nếu không nhớ mã PIN.
+
+2. **Compose trong WindowManager (`OverlayLifecycleOwner.kt` & `LockOverlayManager.kt`)**:
+   - Triển khai custom `OverlayLifecycleOwner` (kết hợp `LifecycleOwner`, `SavedStateRegistryOwner`, `ViewModelStoreOwner`) để chạy Jetpack Compose mượt mà trực tiếp trên `WindowManager` của Background Service.
+   - `LockOverlayManager`: Sử dụng `WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY`, chặn hoàn toàn tương tác vào app bên dưới khi đang bị khóa.
+
+3. **Chụp ảnh ngầm CameraX (`IntruderCaptureManager.kt`)**:
+   - Sử dụng CameraX API với camera trước (`CameraSelector.DEFAULT_FRONT_CAMERA`).
+   - Chụp ảnh ngầm hoàn toàn: **không mở màn hình camera preview, không bật đèn flash, không phát âm thanh chụp**.
+   - Lưu ảnh an toàn vào bộ nhớ nội bộ riêng của ứng dụng (`context.filesDir/intruders/`), không xuất hiện trong Gallery công khai.
+   - Tự động ghi nhật ký xâm nhập vào Room Database (`IntruderLog`) gồm: đường dẫn ảnh, thời gian, tên app, package name, số lần nhập sai.
+   - Hỗ trợ rung phản hồi cảnh báo bằng `Vibrator` / `VibratorManager`.
+
+4. **Xác thực sinh trắc học vân tay (`BiometricAuthHelper.kt` & `BiometricPromptActivity.kt`)**:
+   - Kiểm tra hỗ trợ cảm biến vân tay trên thiết bị bằng `BiometricManager`.
+   - Tạo `BiometricPromptActivity` với theme trong suốt (`Theme.LockApp.Translucent`) để hiển thị hộp thoại vân tay gốc của Android.
+   - Mở khóa thành công bằng vân tay sẽ ngay lập tức mở app và đóng overlay.
+
+5. **Kết nối hoàn chỉnh luồng hoạt động (`LockAccessibilityService.kt`)**:
+   - Khi phát hiện người dùng chạm vào app bị khóa (< 15ms):
+     1. Kích hoạt `LockOverlayManager.showLockOverlay(packageName)` che kín app.
+     2. Tự động chụp ảnh mặt người cầm máy bằng `IntruderCaptureManager.captureIntruder()`.
+   - Quản lý phiên tạm thời (`tempUnlockedPackage`): Khi người dùng nhập đúng PIN hoặc vân tay, cho phép sử dụng bình thường; khi chuyển sang app khác hoặc về Home, trạng thái khóa sẽ tự động kích hoạt lại.
+
+6. **Mật khẩu dự phòng ban đầu (`RepairModeManager.kt`)**:
+   - Tích hợp PIN mặc định ban đầu là `1234` để kiểm thử ngay lập tức trước khi cài đặt mật khẩu riêng.
+
+---
+
 ## ⏳ Chờ triển khai (Các bước tiếp theo)
 
-### Bước 2: Màn Hình Khóa & Cơ Chế Chụp Ảnh (Giai đoạn 2)
-- [ ] Giao diện nhập PIN overlay (Compose trong WindowManager)
-- [ ] Tích hợp CameraX chụp ảnh cam trước ngầm
-- [ ] BiometricPrompt cho mở khóa vân tay
-- [ ] Kết nối Accessibility → Overlay → Camera
-
 ### Bước 3: Giao Diện Quản Lý & Repair Mode (Giai đoạn 3)
-- [ ] AppListScreen – Quét & hiển thị toàn bộ app, checkbox khóa
-- [ ] IntruderLogScreen – Timeline nhật ký xâm nhập
-- [ ] SetupScreen – Thiết lập lần đầu (tạo PIN, cấp quyền)
-- [ ] Repair Mode logic hoàn chỉnh
+- [ ] AppListScreen – Quét & hiển thị toàn bộ app đã cài đặt, tìm kiếm & checkbox chọn khóa
+- [ ] IntruderLogScreen – Timeline nhật ký xâm nhập hiển thị ảnh chụp mặt kẻ tò mò, thời gian và app bị mở
+- [ ] SetupScreen – Thiết lập lần đầu (tạo PIN riêng, hướng dẫn cấp quyền)
+- [ ] Repair Mode logic hoàn chỉnh (Bật/tắt 1 chạm trên HomeScreen)
 
 ### Bước 4: Bảo Vệ Chuyên Sâu & Đóng Gói (Giai đoạn 4)
-- [ ] SettingsScreen hoàn thiện
-- [ ] Tối ưu hiệu năng & pin
-- [ ] Kiểm thử trên thiết bị thật
-- [ ] Đóng gói APK release
+- [ ] SettingsScreen hoàn thiện (Đổi mã PIN, bật/tắt chụp ảnh ngầm, bật/tắt vân tay)
+- [ ] Tối ưu hóa hiệu năng & thời lượng pin
+- [ ] Kiểm thử toàn diện trên thiết bị thật
+- [ ] Đóng gói APK release tối ưu hóa ProGuard/R8
+

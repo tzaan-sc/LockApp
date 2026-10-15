@@ -1,20 +1,30 @@
 package com.lockapp.service
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
+import androidx.compose.ui.platform.ComposeView
+import com.lockapp.camera.IntruderCaptureManager
+import com.lockapp.ui.auth.BiometricAuthHelper
+import com.lockapp.ui.auth.BiometricPromptActivity
+import com.lockapp.ui.screens.LockOverlayScreen
+import com.lockapp.util.RepairModeManager
 
 /**
- * Quản lý hiển thị Overlay màn hình khóa.
- * Sử dụng WindowManager để vẽ view đè lên toàn bộ ứng dụng khác.
- *
- * Giai đoạn 1: Khởi tạo cấu trúc cơ bản.
- * Giai đoạn 2: Sẽ thêm giao diện nhập PIN bằng Compose.
+ * Quản lý hiển thị Overlay màn hình khóa bằng Jetpack Compose đè lên ứng dụng bị khóa.
+ * Chạy trực tiếp qua WindowManager trong background service mà không làm mất trạng thái của app.
  */
-class LockOverlayManager(private val context: Context) {
+class LockOverlayManager private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "LockOverlay"
@@ -33,63 +43,162 @@ class LockOverlayManager(private val context: Context) {
 
     private val windowManager: WindowManager =
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val repairModeManager = RepairModeManager(context)
 
+    private var overlayView: View? = null
+    private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
     private var isOverlayShowing = false
     private var currentLockedPackage: String? = null
 
-    /**
-     * Tạo LayoutParams cho overlay window.
-     * TYPE_APPLICATION_OVERLAY cho phép hiển thị trên mọi app khác.
-     */
-    private fun createOverlayLayoutParams(): WindowManager.LayoutParams {
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
-        return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-        }
-    }
+    /** Callback thông báo khi mở khóa thành công */
+    var onUnlockListener: ((String) -> Unit)? = null
 
     /**
      * Hiển thị overlay khóa cho một app cụ thể.
-     * TODO: Giai đoạn 2 - Thêm Compose View với giao diện nhập PIN.
      */
     fun showLockOverlay(packageName: String) {
+        if (!Settings.canDrawOverlays(context)) {
+            Log.w(TAG, "Cannot show overlay: SYSTEM_ALERT_WINDOW permission missing")
+            return
+        }
+
         if (isOverlayShowing && currentLockedPackage == packageName) {
             Log.d(TAG, "Overlay already showing for $packageName")
             return
         }
 
-        Log.d(TAG, "Showing lock overlay for: $packageName")
-        currentLockedPackage = packageName
-        isOverlayShowing = true
+        mainHandler.post {
+            try {
+                // Nếu đang hiển thị overlay cũ thì xóa trước
+                if (overlayView != null) {
+                    removeOverlayViewInternal()
+                }
 
-        // TODO Giai đoạn 2: Tạo ComposeView với giao diện PIN và add vào WindowManager
+                currentLockedPackage = packageName
+                isOverlayShowing = true
+                Log.d(TAG, "Showing lock overlay for: $packageName")
+
+                val pm = context.packageManager
+                val (appName, appIcon) = try {
+                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                    Pair(pm.getApplicationLabel(appInfo).toString(), pm.getApplicationIcon(appInfo))
+                } catch (e: Exception) {
+                    Pair(packageName, null)
+                }
+
+                val lifecycleOwner = OverlayLifecycleOwner()
+                overlayLifecycleOwner = lifecycleOwner
+
+                val composeView = ComposeView(context).apply {
+                    lifecycleOwner.attachToView(this)
+                    setContent {
+                        LockOverlayScreen(
+                            appName = appName,
+                            appPackage = packageName,
+                            appIcon = appIcon,
+                            isBiometricAvailable = BiometricAuthHelper.isBiometricAvailable(context),
+                            onVerifyPin = { pin ->
+                                repairModeManager.verifyPin(pin)
+                            },
+                            onUnlockSuccess = {
+                                onUnlockSuccess()
+                            },
+                            onWrongPin = { attemptCount ->
+                                IntruderCaptureManager.getInstance(context).vibrateOnError()
+                                IntruderCaptureManager.getInstance(context).captureIntruder(
+                                    targetAppPackage = packageName,
+                                    targetAppName = appName,
+                                    wrongAttempts = attemptCount,
+                                    note = "Nhập sai PIN lần thứ $attemptCount"
+                                )
+                            },
+                            onBiometricClick = {
+                                val intent = Intent(context, BiometricPromptActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                                }
+                                context.startActivity(intent)
+                            },
+                            onExitToHome = {
+                                hideLockOverlay()
+                                val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                                    addCategory(Intent.CATEGORY_HOME)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                context.startActivity(homeIntent)
+                            }
+                        )
+                    }
+                }
+
+                val layoutParams = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    } else {
+                        @Suppress("DEPRECATION")
+                        WindowManager.LayoutParams.TYPE_PHONE
+                    },
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.CENTER
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
+
+                windowManager.addView(composeView, layoutParams)
+                lifecycleOwner.onResume()
+                overlayView = composeView
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error displaying lock overlay: ${e.message}", e)
+                isOverlayShowing = false
+                currentLockedPackage = null
+            }
+        }
     }
 
     /**
-     * Ẩn overlay khi nhập đúng PIN.
+     * Xử lý khi mở khóa thành công (nhập đúng PIN hoặc vân tay).
+     */
+    fun onUnlockSuccess() {
+        val unlockedPkg = currentLockedPackage
+        hideLockOverlay()
+        if (unlockedPkg != null) {
+            onUnlockListener?.invoke(unlockedPkg)
+        }
+    }
+
+    /**
+     * Ẩn overlay.
      */
     fun hideLockOverlay() {
-        if (!isOverlayShowing) return
+        mainHandler.post {
+            removeOverlayViewInternal()
+        }
+    }
 
-        Log.d(TAG, "Hiding lock overlay for: $currentLockedPackage")
-        isOverlayShowing = false
-        currentLockedPackage = null
-
-        // TODO Giai đoạn 2: Remove view khỏi WindowManager
+    private fun removeOverlayViewInternal() {
+        try {
+            overlayView?.let { view ->
+                if (view.isAttachedToWindow) {
+                    windowManager.removeView(view)
+                }
+            }
+            overlayLifecycleOwner?.onDestroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing overlay view: ${e.message}", e)
+        } finally {
+            overlayView = null
+            overlayLifecycleOwner = null
+            isOverlayShowing = false
+            currentLockedPackage = null
+        }
     }
 
     fun isShowing(): Boolean = isOverlayShowing

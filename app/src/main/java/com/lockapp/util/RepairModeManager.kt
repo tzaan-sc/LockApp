@@ -62,8 +62,11 @@ class RepairModeManager(private val context: Context) {
             .apply()
     }
 
-    /** Xác thực PIN */
+    /** Xác thực PIN (mặc định 1234 nếu chưa thiết lập) */
     fun verifyPin(pin: String): Boolean {
+        if (!isPinSet()) {
+            return pin == "1234"
+        }
         val storedHash = prefs.getString(KEY_PIN_HASH, null) ?: return false
         val storedSalt = prefs.getString(KEY_PIN_SALT, null) ?: return false
         return SecurityUtils.verifyPassword(pin, storedHash, storedSalt)
