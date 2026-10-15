@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LockApp</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">LockApp cần quyền Trợ năng để phát hiện khi ứng dụng bị khóa được mở, từ đó hiển thị màn hình bảo vệ ngay lập tức.</string>
+
+    <!-- Device Admin -->
+    <string name="device_admin_description">Kích hoạt quyền Quản trị viên thiết bị để ngăn chặn việc gỡ cài đặt LockApp khi đang ở chế độ bảo vệ.</string>
+
+    <!-- Foreground Service Notification -->
+    <string name="notification_channel_name">Bảo vệ ứng dụng</string>
+    <string name="notification_channel_description">Thông báo cho biết LockApp đang chạy và bảo vệ các ứng dụng của bạn</string>
+    <string name="notification_title">LockApp đang bảo vệ</string>
+    <string name="notification_text">Đang giám sát %d ứng dụng</string>
+    <string name="notification_text_repair_mode">Chế độ sửa máy đang bật – Đang bảo vệ %d ứng dụng</string>
+
+    <!-- Lock Screen -->
+    <string name="lock_screen_title">Ứng dụng bị khóa</string>
+    <string name="lock_screen_subtitle">Nhập mã PIN để mở khóa</string>
+    <string name="lock_screen_wrong_pin">Sai mật khẩu. Vui lòng thử lại.</string>
+    <string name="lock_screen_fingerprint">Mở bằng vân tay</string>
+
+    <!-- Home Screen -->
+    <string name="home_repair_mode">Chế Độ Sửa Máy</string>
+    <string name="home_repair_mode_on">Đang BẬT bảo vệ</string>
+    <string name="home_repair_mode_off">Đã TẮT bảo vệ</string>
+    <string name="home_protected_apps">ứng dụng được bảo vệ</string>
+    <string name="home_intrusion_detected">lần xâm nhập phát hiện</string>
+
+    <!-- App List -->
+    <string name="app_list_title">Chọn ứng dụng khóa</string>
+    <string name="app_list_search">Tìm kiếm ứng dụng…</string>
+    <string name="category_social">Mạng xã hội</string>
+    <string name="category_messaging">Tin nhắn</string>
+    <string name="category_media">Ảnh/Video</string>
+    <string name="category_finance">Tài chính</string>
+    <string name="category_system">Hệ thống</string>
+    <string name="category_all">Tất cả</string>
+
+    <!-- Intruder Log -->
+    <string name="intruder_log_title">Nhật ký xâm nhập</string>
+    <string name="intruder_log_empty">Chưa có bản ghi xâm nhập nào</string>
+    <string name="intruder_log_attempts">%d lần nhập sai</string>
+    <string name="intruder_log_delete_all">Xóa tất cả</string>
+    <string name="intruder_log_delete_confirm">Bạn có chắc muốn xóa toàn bộ nhật ký xâm nhập?</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="settings_change_pin">Đổi mã PIN</string>
+    <string name="settings_biometric">Mở khóa bằng vân tay</string>
+    <string name="settings_device_admin">Chống gỡ cài đặt</string>
+    <string name="settings_usb_warning">Cảnh báo USB Debugging</string>
+    <string name="settings_about">Thông tin ứng dụng</string>
+    <string name="settings_version">Phiên bản %s</string>
+
+    <!-- Setup -->
+    <string name="setup_welcome">Chào mừng đến với LockApp</string>
+    <string name="setup_create_pin">Tạo mã PIN bảo vệ</string>
+    <string name="setup_confirm_pin">Xác nhận lại mã PIN</string>
+    <string name="setup_pin_mismatch">Mã PIN không khớp. Vui lòng thử lại.</string>
+    <string name="setup_permissions">Cấp quyền cần thiết</string>
+    <string name="setup_complete">Thiết lập hoàn tất!</string>
+
+    <!-- Permissions -->
+    <string name="permission_overlay">Hiển thị trên ứng dụng khác</string>
+    <string name="permission_accessibility">Dịch vụ Trợ năng</string>
+    <string name="permission_camera">Camera (chụp ảnh xâm nhập)</string>
+    <string name="permission_usage_stats">Quyền truy cập sử dụng</string>
+    <string name="permission_device_admin">Quản trị viên thiết bị</string>
+    <string name="permission_battery">Không tối ưu pin</string>
+
+    <!-- Common -->
+    <string name="btn_ok">Đồng ý</string>
+    <string name="btn_cancel">Hủy</string>
+    <string name="btn_save">Lưu</string>
+    <string name="btn_next">Tiếp tục</string>
+    <string name="btn_done">Hoàn tất</string>
+    <string name="btn_delete">Xóa</string>
+    <string name="btn_grant">Cấp quyền</string>
+</resources>

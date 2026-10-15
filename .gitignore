@@ -1,0 +1,33 @@
+.env
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+local.properties
+
+# Android build
+app/build/
+app/release/
+*.apk
+*.aab
+*.ap_
+
+# Signing
+*.jks
+*.keystore
+signing.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+captures/
+.externalNativeBuild/
+.cxx/

@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Shield outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24L30,34v16c0,16.4 10.2,31.7 24,36 13.8,-4.3 24,-19.6 24,-36V34L54,24zM54,72.4C42.6,68.5 36,55.9 36,44V38.2l18,-8 18,8V44c0,11.9 -6.6,24.5 -18,28.4z"/>
+    <!-- Lock icon inside shield -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,42c-3.3,0 -6,2.7 -6,6v2h-2v10h16V50h-2v-2c0,-3.3 -2.7,-6 -6,-6zM58,50h-8v-2c0,-2.2 1.8,-4 4,-4s4,1.8 4,4v2z"/>
+</vector>
