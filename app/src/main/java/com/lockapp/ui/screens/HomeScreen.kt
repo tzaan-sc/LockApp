@@ -29,11 +29,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lockapp.camera.IntruderCaptureManager
+import com.lockapp.data.AppDatabase
 import com.lockapp.service.LockAccessibilityService
 import com.lockapp.service.LockService
 import com.lockapp.ui.theme.*
 import com.lockapp.util.PermissionHelper
 import com.lockapp.util.RepairModeManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Màn hình chính (Home) của LockApp.
@@ -47,8 +51,17 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val database = remember { AppDatabase.getInstance(context) }
     val repairModeManager = remember { RepairModeManager(context) }
+    val scope = rememberCoroutineScope()
+
     var isRepairMode by remember { mutableStateOf(repairModeManager.isRepairModeActive()) }
+    var showDeactivatePinDialog by remember { mutableStateOf(false) }
+    var deactivatePinInput by remember { mutableStateOf("") }
+    var deactivatePinError by remember { mutableStateOf<String?>(null) }
+
+    val lockedCount by database.lockedAppDao().getLockedCount().collectAsState(initial = 0)
+    val intruderCount by database.intruderLogDao().getTotalCount().collectAsState(initial = 0)
     val scrollState = rememberScrollState()
 
     // Animation cho nút Repair Mode
@@ -97,13 +110,18 @@ fun HomeScreen(
                 isActive = isRepairMode,
                 scale = switchScale,
                 onToggle = {
-                    isRepairMode = !isRepairMode
-                    if (isRepairMode) {
+                    if (!isRepairMode) {
+                        isRepairMode = true
                         repairModeManager.activateRepairMode()
                         startLockService(context)
+                        scope.launch(Dispatchers.IO) {
+                            database.lockedAppDao().lockAllRepairModeDefaults()
+                        }
                     } else {
-                        // TODO: Yêu cầu nhập PIN trước khi tắt
-                        repairModeManager.deactivateRepairMode()
+                        // Yêu cầu nhập PIN trước khi tắt
+                        deactivatePinInput = ""
+                        deactivatePinError = null
+                        showDeactivatePinDialog = true
                     }
                 }
             )
@@ -118,14 +136,14 @@ fun HomeScreen(
                 StatusCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Filled.Shield,
-                    value = "0",
+                    value = lockedCount.toString(),
                     label = "App bảo vệ",
                     color = StatusProtected
                 )
                 StatusCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Filled.CameraFront,
-                    value = "0",
+                    value = intruderCount.toString(),
                     label = "Lần xâm nhập",
                     color = AccentRed
                 )
@@ -161,7 +179,7 @@ fun HomeScreen(
                 icon = Icons.Outlined.Security,
                 title = "Trạng thái quyền",
                 subtitle = buildPermissionStatus(context),
-                onClick = { /* TODO: Mở màn hình kiểm tra quyền */ }
+                onClick = onNavigateToSettings
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -171,6 +189,69 @@ fun HomeScreen(
                 UsbWarningCard()
                 Spacer(modifier = Modifier.height(20.dp))
             }
+        }
+
+        if (showDeactivatePinDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeactivatePinDialog = false },
+                title = { Text("Tắt Chế Độ Sửa Máy", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        Text(
+                            "Vui lòng nhập mã PIN bảo mật để tắt chế độ bảo vệ:",
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        OutlinedTextField(
+                            value = deactivatePinInput,
+                            onValueChange = {
+                                if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                                    deactivatePinInput = it
+                                }
+                            },
+                            label = { Text("Mã PIN") },
+                            singleLine = true,
+                            isError = deactivatePinError != null,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (deactivatePinError != null) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = deactivatePinError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (repairModeManager.verifyPin(deactivatePinInput)) {
+                                repairModeManager.deactivateRepairMode()
+                                isRepairMode = false
+                                showDeactivatePinDialog = false
+                            } else {
+                                deactivatePinError = "Mã PIN không đúng"
+                                IntruderCaptureManager.getInstance(context).vibrateOnError()
+                                IntruderCaptureManager.getInstance(context).captureIntruder(
+                                    targetAppPackage = "com.lockapp",
+                                    targetAppName = "LockApp",
+                                    wrongAttempts = 1,
+                                    note = "Cố gắng tắt Repair Mode sai PIN"
+                                )
+                            }
+                        }
+                    ) {
+                        Text("Xác nhận")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeactivatePinDialog = false }) {
+                        Text("Hủy")
+                    }
+                }
+            )
         }
     }
 }

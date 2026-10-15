@@ -127,7 +127,12 @@ LockApp/
 │           │   ├── theme/ (Color.kt, Theme.kt, Type.kt)
 │           │   ├── navigation/Navigation.kt
 │           │   ├── auth/ (BiometricAuthHelper.kt, BiometricPromptActivity.kt)
-│           │   └── screens/ (HomeScreen.kt, LockOverlayScreen.kt)
+│           │   └── screens/
+│           │       ├── HomeScreen.kt
+│           │       ├── LockOverlayScreen.kt
+│           │       ├── AppListScreen.kt
+│           │       ├── IntruderLogScreen.kt
+│           │       └── SetupScreen.kt
 │           ├── service/
 │           │   ├── LockService.kt
 │           │   ├── LockAccessibilityService.kt
@@ -194,17 +199,54 @@ LockApp/
 
 ---
 
-## ⏳ Chờ triển khai (Các bước tiếp theo)
+## ✅ Bước 3: Giao Diện Quản Lý & Chế Độ Sửa Máy (Giai đoạn 3)
 
-### Bước 3: Giao Diện Quản Lý & Repair Mode (Giai đoạn 3)
-- [ ] AppListScreen – Quét & hiển thị toàn bộ app đã cài đặt, tìm kiếm & checkbox chọn khóa
-- [ ] IntruderLogScreen – Timeline nhật ký xâm nhập hiển thị ảnh chụp mặt kẻ tò mò, thời gian và app bị mở
-- [ ] SetupScreen – Thiết lập lần đầu (tạo PIN riêng, hướng dẫn cấp quyền)
-- [ ] Repair Mode logic hoàn chỉnh (Bật/tắt 1 chạm trên HomeScreen)
+**Trạng thái:** ✅ Đã hoàn thành & Build APK thành công (`app-debug.apk`)!
+
+### Đã hoàn thành trong Bước 3:
+
+1. **Màn hình Quản lý ứng dụng khóa (`AppListScreen.kt`)**:
+   - Quét toàn bộ ứng dụng cài đặt trên thiết bị bằng `PackageManager` (kèm app Cài đặt hệ thống).
+   - Tự động nhận diện và gắn nhãn "Nhạy cảm" cho các app quan trọng: Zalo, Messenger, Facebook, Google Photos, Album ảnh, Tin nhắn SMS, CH Play, Cài đặt...
+   - Phân loại danh mục theo tab: **Tất cả | Đang khóa | Mạng xã hội | Ảnh & Video | Tài chính | Hệ thống**.
+   - Thanh tìm kiếm ứng dụng thời gian thực.
+   - Công tắc (Switch) chọn khóa/mở khóa từng ứng dụng, lưu trực tiếp và đồng bộ vào Room Database (`LockedAppDao`).
+   - Nút hành động nhanh **"Khóa đề xuất"**: tự động khóa ngay lập tức toàn bộ app nhạy cảm.
+
+2. **Màn hình Nhật ký xâm nhập (`IntruderLogScreen.kt`)**:
+   - Danh sách timeline trực quan kết nối trực tiếp với Room Database (`IntruderLogDao.getAllLogs()`).
+   - Hiển thị ảnh chụp khuôn mặt kẻ xâm nhập (thumbnail tỉ lệ chuẩn), tên ứng dụng bị truy cập, thời gian chi tiết (`HH:mm:ss - dd/MM/yyyy`) và số lần nhập sai PIN.
+   - Hộp thoại **xem chi tiết ảnh phóng to**: nhấn vào ảnh bất kỳ để xem toàn bộ thông tin và ảnh chất lượng cao.
+   - Tính năng xóa từng bản ghi hoặc nút **"Xóa tất cả"** trên thanh tiêu đề (tự động dọn sạch cả database lẫn file ảnh trong storage).
+   - Trạng thái trống (Empty State) với biểu tượng khiên bảo vệ xanh lá khi thiết bị an toàn.
+
+3. **Màn hình Thiết lập lần đầu Onboarding (`SetupScreen.kt`)**:
+   - Hướng dẫn thiết lập 2 bước thân thiện:
+     - **Bước 1**: Tạo mã PIN bảo mật cá nhân (4 số) + xác nhận lại mã PIN.
+     - **Bước 2**: Danh sách cấp quyền hệ thống trực quan với tích xanh real-time:
+       - Quyền Vẽ đè (Overlay)
+       - Quyền Hỗ trợ tiếp cận (Accessibility Service)
+       - Quyền Camera ngầm
+       - Quyền Quản trị viên thiết bị (Device Admin - chống gỡ cài đặt)
+   - Lưu trữ mã PIN đã băm bảo mật (PBKDF2) qua `RepairModeManager` và kích hoạt trạng thái sẵn sàng bảo vệ.
+
+4. **Nâng cấp Logic Chế độ Sửa máy (Repair Mode) trên `HomeScreen.kt`**:
+   - Hiển thị số liệu thời gian thực: **Số app đang bảo vệ** và **Số lần phát hiện xâm nhập** qua Flow Room Database.
+   - Khi **BẬT Repair Mode** (1 chạm): Tự động khóa toàn bộ app mặc định nhạy cảm và khởi chạy Foreground Service bảo vệ.
+   - Khi **TẮT Repair Mode**: Bắt buộc hiển thị hộp thoại xác thực mã PIN bảo mật. Chỉ khi nhập đúng PIN mới cho phép tắt bảo vệ. Nếu nhập sai, tự động rung cảnh báo và chụp ảnh kẻ đang cố tắt bảo vệ.
+
+5. **Điều hướng toàn diện (`Navigation.kt`)**:
+   - Tự động kiểm tra `isSetupComplete()` để chuyển người dùng vào `SetupScreen` (nếu mở lần đầu) hoặc `HomeScreen` (nếu đã thiết lập).
+   - Kết nối mượt mà giữa các màn hình `Home` ↔ `AppList` ↔ `IntruderLog` ↔ `Setup`.
+
+---
+
+## ⏳ Chờ triển khai (Các bước tiếp theo)
 
 ### Bước 4: Bảo Vệ Chuyên Sâu & Đóng Gói (Giai đoạn 4)
 - [ ] SettingsScreen hoàn thiện (Đổi mã PIN, bật/tắt chụp ảnh ngầm, bật/tắt vân tay)
 - [ ] Tối ưu hóa hiệu năng & thời lượng pin
 - [ ] Kiểm thử toàn diện trên thiết bị thật
 - [ ] Đóng gói APK release tối ưu hóa ProGuard/R8
+
 
