@@ -74,9 +74,8 @@ fun LockAppNavHost() {
         }
 
         composable(Screen.Settings.route) {
-            // Mở lại màn hình thiết lập / quyền
-            SetupScreen(
-                onSetupComplete = {
+            com.lockapp.ui.screens.SettingsScreen(
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )

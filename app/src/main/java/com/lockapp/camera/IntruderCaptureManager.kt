@@ -101,6 +101,19 @@ class IntruderCaptureManager private constructor(private val context: Context) {
             return
         }
 
+        val repairModeManager = com.lockapp.util.RepairModeManager(context)
+        if (!repairModeManager.isCameraCaptureEnabled()) {
+            Log.d(TAG, "Intruder camera is disabled in settings, skipping photo")
+            saveLogToDb(
+                photoPath = null,
+                targetAppPackage = targetAppPackage,
+                targetAppName = targetAppName ?: targetAppPackage,
+                wrongAttempts = wrongAttempts,
+                note = note ?: "Chụp ảnh đã bị tắt trong cài đặt"
+            )
+            return
+        }
+
         // Tránh chụp đồng thời nhiều ảnh gây xung đột camera
         if (isCapturing) {
             Log.d(TAG, "Capture already in progress, skipping")

@@ -18,6 +18,7 @@ class RepairModeManager(private val context: Context) {
         private const val KEY_PIN_SALT = "pin_salt"
         private const val KEY_SETUP_COMPLETE = "setup_complete"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
+        private const val KEY_CAMERA_CAPTURE_ENABLED = "camera_capture_enabled"
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -95,5 +96,23 @@ class RepairModeManager(private val context: Context) {
     /** Kiểm tra vân tay có được bật không */
     fun isBiometricEnabled(): Boolean {
         return prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
+    }
+
+    /** Bật/tắt tự động chụp ảnh ngầm */
+    fun setCameraCaptureEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CAMERA_CAPTURE_ENABLED, enabled).apply()
+    }
+
+    /** Kiểm tra chụp ảnh ngầm có được bật không (mặc định bật) */
+    fun isCameraCaptureEnabled(): Boolean {
+        return prefs.getBoolean(KEY_CAMERA_CAPTURE_ENABLED, true)
+    }
+
+    /** Đổi mã PIN bảo mật */
+    fun changePin(oldPin: String, newPin: String): Boolean {
+        if (!verifyPin(oldPin)) return false
+        val (newHash, newSalt) = SecurityUtils.hashPassword(newPin)
+        savePinHash(newHash, newSalt)
+        return true
     }
 }
