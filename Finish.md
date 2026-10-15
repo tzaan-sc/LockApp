@@ -249,4 +249,67 @@ LockApp/
 - [ ] Kiểm thử toàn diện trên thiết bị thật
 - [ ] Đóng gói APK release tối ưu hóa ProGuard/R8
 
+Dạ **hoàn toàn sửa tiếp được bất kỳ lúc nào** bạn nhé! 
 
+Toàn bộ mã nguồn nằm trực tiếp trên máy của bạn (trong thư mục dự án Git này). Sau khi hoàn thành Bước 4:
+- Bạn có thể yêu cầu tôi chỉnh sửa bất kỳ giao diện, màu sắc, phím bấm, tính năng nào.
+- Có thể thêm tính năng mới bất kỳ (ví dụ: gửi ảnh intruder về Telegram/Email, khóa thêm app mới, đổi nhạc chuông cảnh báo, v.v.).
+- Có thể biên dịch lại file APK mới bất cứ lúc nào chỉ với một câu lệnh.
+
+---
+
+### 📋 Kế hoạch chi tiết cho BƯỚC 4 (Giai đoạn cuối: Bảo Vệ Chuyên Sâu & Đóng Gói)
+
+Bước 4 sẽ tập trung vào **bảo mật chuyên sâu, trải nghiệm cài đặt và xuất bản file APK thành phẩm**:
+
+```
+Bước 4: Bảo Vệ Chuyên Sâu & Đóng Gói
+├── 1. Màn hình Cài đặt hoàn chỉnh (SettingsScreen.kt)
+│   ├── Đổi mã PIN bảo mật (Xác thực PIN cũ → Nhập PIN mới → Xác nhận)
+│   ├── Công tắc Bật/Tắt mở khóa vân tay (Biometric)
+│   ├── Công tắc Bật/Tắt tự động chụp ảnh ngầm kẻ xâm nhập
+│   ├── Bật/Tắt bảo vệ chống gỡ cài đặt (Device Admin)
+│   └── Tắt tối ưu hóa pin (giúp app chạy ngầm 24/7 không bị hệ thống tắt)
+│
+├── 2. Cơ chế Chống Phá Khóa & Chống Gỡ App
+│   ├── Kích hoạt DeviceAdminReceiver bảo vệ app không bị kéo vào thùng rác gỡ bỏ
+│   └── Tự động khóa chặt ứng dụng "Cài đặt (Settings)" của máy khi bật Repair Mode
+│
+├── 3. Tối ưu Hiệu Năng & Bộ Nhớ (Battery & Performance)
+│   ├── Tối ưu vòng đời camera (giải phóng RAM ngay sau khi chụp ngầm)
+│   └── Miễn nhiễm cơ chế tắt ứng dụng ngầm của Android (Doze Mode)
+│
+├── 4. Cấu hình ProGuard / R8 & Đóng gói APK
+│   ├── Cấu hình proguard-rules.pro để bảo vệ mã nguồn, chống thợ dịch ngược (decompilation)
+│   └── Build file APK chính thức sẵn sàng cài vào điện thoại
+│
+└── 5. Hướng dẫn chi tiết cách cài đặt & sử dụng trên máy thật
+```
+
+---
+
+### 🔍 Chi tiết từng phần sẽ làm trong Bước 4:
+
+#### 1. Màn hình Cài đặt (`SettingsScreen.kt`)
+- **Đổi mã PIN:** Giao diện nhập mã PIN cũ, sau đó tạo mã PIN mới và lưu hash an toàn (PBKDF2).
+- **Cấu hình chức năng:** 
+  - Switch cho phép người dùng tùy chọn có dùng vân tay hay không.
+  - Switch bật/tắt chụp ảnh ngầm nếu không muốn camera hoạt động.
+- **Tối ưu pin (Doze Mode):** Nút mở thẳng cài đặt "Bỏ qua tối ưu hóa pin" để hệ thống Android không tự động tắt dịch vụ ngầm khi máy tắt màn hình lâu.
+
+#### 2. Kích hoạt bảo vệ Chống gỡ cài đặt (`LockAdminReceiver.kt`)
+- Khi người dùng bật quyền Device Administrator trong app:
+  - Bất kỳ ai cố kéo icon app vào "Gỡ cài đặt" hoặc vào Settings để bấm "Gỡ cài đặt" sẽ bị hệ điều hành Android chặn lại.
+  - Muốn gỡ app, bắt buộc phải vào LockApp, nhập đúng mã PIN chính để hủy quyền quản trị trước.
+
+#### 3. Tối ưu mã nguồn với ProGuard (`proguard-rules.pro`)
+- Giữ nguyên các class Room Database, CameraX, Jetpack Compose để app chạy mượt mà.
+- Xóa bỏ các đoạn mã thừa, thu nhỏ dung lượng APK và làm rối code (obfuscation) để thợ sửa máy không thể soi mã nguồn.
+
+#### 4. Xuất file APK & Hướng dẫn sử dụng trên điện thoại thật
+- Tạo file APK đóng gói hoàn chỉnh.
+- Hướng dẫn từng bước từ lúc copy file APK vào máy, cấp quyền, tạo mã PIN và bật Chế độ Sửa máy trước khi bàn giao điện thoại cho thợ.
+
+---
+
+Bạn xem qua kế hoạch trên có cần bổ sung hoặc điều chỉnh gì không? Nếu bạn thấy ổn rồi thì nhắn tôi **"bắt đầu bước 4"** để tôi tiến hành nhé!
