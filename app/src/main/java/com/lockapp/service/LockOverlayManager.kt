@@ -11,8 +11,10 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
 import com.lockapp.camera.IntruderCaptureManager
 import com.lockapp.ui.auth.BiometricAuthHelper
@@ -87,8 +89,20 @@ class LockOverlayManager private constructor(private val context: Context) {
                     Pair(packageName, null)
                 }
 
-                val lifecycleOwner = OverlayLifecycleOwner()
+                val exitToHomeAction: () -> Unit = {
+                    hideLockOverlay()
+                    val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(homeIntent)
+                }
+
+                val lifecycleOwner = OverlayLifecycleOwner(onBackPressed = exitToHomeAction)
                 overlayLifecycleOwner = lifecycleOwner
+
+                val rootLayout = OverlayRootLayout(context, onBackPress = exitToHomeAction)
+                lifecycleOwner.attachToView(rootLayout)
 
                 val composeView = ComposeView(context).apply {
                     lifecycleOwner.attachToView(this)
@@ -123,17 +137,11 @@ class LockOverlayManager private constructor(private val context: Context) {
                                 }
                                 context.startActivity(intent)
                             },
-                            onExitToHome = {
-                                hideLockOverlay()
-                                val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                                    addCategory(Intent.CATEGORY_HOME)
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(homeIntent)
-                            }
+                            onExitToHome = exitToHomeAction
                         )
                     }
                 }
+                rootLayout.addView(composeView)
 
                 val layoutParams = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
@@ -155,9 +163,10 @@ class LockOverlayManager private constructor(private val context: Context) {
                     }
                 }
 
-                windowManager.addView(composeView, layoutParams)
+                windowManager.addView(rootLayout, layoutParams)
+                rootLayout.requestFocus()
                 lifecycleOwner.onResume()
-                overlayView = composeView
+                overlayView = rootLayout
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error displaying lock overlay: ${e.message}", e)
@@ -208,4 +217,30 @@ class LockOverlayManager private constructor(private val context: Context) {
     fun isShowing(): Boolean = isOverlayShowing
 
     fun getCurrentLockedPackage(): String? = currentLockedPackage
+}
+
+/**
+ * Root FrameLayout chạy trực tiếp trên WindowManager,
+ * có khả năng nhận focus và bắt sự kiện KeyEvent.KEYCODE_BACK (phím Back hoặc cử chỉ vuốt Back)
+ * để tự động đưa máy về màn hình chính.
+ */
+private class OverlayRootLayout(
+    context: Context,
+    private val onBackPress: () -> Unit
+) : FrameLayout(context) {
+
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        if (event?.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                onBackPress()
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }
