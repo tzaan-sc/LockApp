@@ -42,7 +42,7 @@ fun LockAppNavHost() {
                     navController.navigate(Screen.IntruderLog.route)
                 },
                 onNavigateToSettings = {
-                    navController.navigate(Screen.Setup.route)
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
