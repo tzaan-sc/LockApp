@@ -1,10 +1,14 @@
 package com.lockapp.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.ContextCompat
 import com.lockapp.camera.IntruderCaptureManager
 import com.lockapp.data.AppDatabase
 import com.lockapp.util.RepairModeManager
@@ -55,6 +59,19 @@ class LockAccessibilityService : AccessibilityService() {
         "com.samsung.android.messaging"
     )
 
+    // Bộ lắng nghe sự kiện tắt màn hình (Screen Off) để khóa lại ứng dụng ngay lập tức
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                Log.d(TAG, "Screen OFF detected: Revoking temporary unlock session and resetting overlay state")
+                tempUnlockedPackage = null
+                lastPackageName = null
+                overlayManager.hideLockOverlay()
+            }
+        }
+    }
+    private var isScreenReceiverRegistered = false
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         isRunning = true
@@ -67,6 +84,18 @@ class LockAccessibilityService : AccessibilityService() {
         overlayManager.onUnlockListener = { packageName ->
             Log.d(TAG, "Package temporarily unlocked: $packageName")
             tempUnlockedPackage = packageName
+        }
+
+        // Đăng ký bộ lắng nghe sự kiện tắt màn hình (Screen Off)
+        if (!isScreenReceiverRegistered) {
+            val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            isScreenReceiverRegistered = true
         }
 
         Log.d(TAG, "LockAccessibilityService connected successfully")
@@ -205,6 +234,14 @@ class LockAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        if (isScreenReceiverRegistered) {
+            try {
+                unregisterReceiver(screenReceiver)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unregistering screenReceiver: ${e.message}")
+            }
+            isScreenReceiverRegistered = false
+        }
         Log.d(TAG, "Accessibility Service destroyed")
     }
 }
