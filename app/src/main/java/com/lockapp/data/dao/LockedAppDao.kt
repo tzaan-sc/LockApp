@@ -28,6 +28,10 @@ interface LockedAppDao {
     @Query("SELECT * FROM locked_apps WHERE isLocked = 1")
     suspend fun getActiveLockedAppsList(): List<LockedApp>
 
+    /** Lấy toàn bộ danh sách app đã lưu cấu hình trong DB (bao gồm cả đang khóa và đã mở khóa) */
+    @Query("SELECT * FROM locked_apps")
+    suspend fun getAllConfiguredAppsList(): List<LockedApp>
+
     /** Kiểm tra một app có đang bị khóa không */
     @Query("SELECT EXISTS(SELECT 1 FROM locked_apps WHERE packageName = :packageName AND isLocked = 1)")
     suspend fun isAppLocked(packageName: String): Boolean

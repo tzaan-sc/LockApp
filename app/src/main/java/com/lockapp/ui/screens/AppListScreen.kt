@@ -106,6 +106,33 @@ fun AppListScreen(
     // Khóa nhanh tất cả app đề xuất
     fun lockAllRecommended() {
         scope.launch(Dispatchers.IO) {
+            val sensitiveDefaults = setOf(
+                "com.android.settings",
+                "com.zing.zalo",
+                "com.facebook.orca",
+                "com.facebook.katana",
+                "com.google.android.apps.photos",
+                "com.sec.android.gallery3d",
+                "com.android.gallery3d",
+                "com.android.vending",
+                "com.google.android.gm",
+                "com.android.mms",
+                "com.google.android.apps.messaging",
+                "com.samsung.android.messaging"
+            )
+            val entities = appList.filter { sensitiveDefaults.contains(it.packageName) || it.isRepairModeDefault }.map {
+                LockedApp(
+                    packageName = it.packageName,
+                    appName = it.appName,
+                    iconUri = null,
+                    isLocked = true,
+                    category = it.category,
+                    isRepairModeDefault = true
+                )
+            }
+            if (entities.isNotEmpty()) {
+                database.lockedAppDao().insertAll(entities)
+            }
             database.lockedAppDao().lockAllRepairModeDefaults()
             loadApps()
         }
@@ -390,8 +417,8 @@ private suspend fun scanInstalledApps(
     // Luôn đưa Settings vào danh sách có thể khóa
     packageSet.add("com.android.settings")
 
-    // Lấy danh sách app đã lưu trong DB
-    val dbApps = database.lockedAppDao().getActiveLockedAppsList().associateBy { it.packageName }
+    // Lấy toàn bộ danh sách app đã lưu cấu hình trong DB (bao gồm cả đang khóa và đã mở khóa)
+    val dbApps = database.lockedAppDao().getAllConfiguredAppsList().associateBy { it.packageName }
 
     val sensitiveDefaults = setOf(
         "com.android.settings",
@@ -418,7 +445,11 @@ private suspend fun scanInstalledApps(
             val name = pm.getApplicationLabel(appInfo).toString()
             val icon = pm.getApplicationIcon(appInfo)
             val isSensitive = sensitiveDefaults.contains(pkg)
-            val isLocked = dbApps[pkg]?.isLocked ?: isSensitive
+            val isLocked = if (dbApps.containsKey(pkg)) {
+                dbApps[pkg]?.isLocked == true
+            } else {
+                isSensitive
+            }
             val category = categorizeApp(pkg, appInfo)
 
             items.add(

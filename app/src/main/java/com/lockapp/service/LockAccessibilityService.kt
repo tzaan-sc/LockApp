@@ -110,10 +110,14 @@ class LockAccessibilityService : AccessibilityService() {
         scope.launch {
             try {
                 val isRepairMode = repairModeManager.isRepairModeActive()
-                val isRepairDefault = isRepairMode && repairModeDefaultPackages.contains(packageName)
-                val isDbLocked = database.lockedAppDao().isAppLocked(packageName)
+                val lockedApp = database.lockedAppDao().getByPackageName(packageName)
+                val isLocked = if (lockedApp != null) {
+                    lockedApp.isLocked
+                } else {
+                    isRepairMode && repairModeDefaultPackages.contains(packageName)
+                }
 
-                if (isRepairDefault || isDbLocked) {
+                if (isLocked) {
                     Log.d(TAG, "App $packageName is locked! Showing overlay and taking silent photo")
 
                     // 1. Hiển thị màn hình khóa Overlay
