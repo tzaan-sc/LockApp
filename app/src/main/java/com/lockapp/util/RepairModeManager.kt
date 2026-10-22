@@ -19,6 +19,7 @@ class RepairModeManager(private val context: Context) {
         private const val KEY_SETUP_COMPLETE = "setup_complete"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_CAMERA_CAPTURE_ENABLED = "camera_capture_enabled"
+        private const val KEY_SCRAMBLE_PINPAD_ENABLED = "scramble_pinpad_enabled"
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -106,6 +107,16 @@ class RepairModeManager(private val context: Context) {
     /** Kiểm tra chụp ảnh ngầm có được bật không (mặc định bật) */
     fun isCameraCaptureEnabled(): Boolean {
         return prefs.getBoolean(KEY_CAMERA_CAPTURE_ENABLED, true)
+    }
+
+    /** Bật/tắt xáo trộn vị trí bàn phím số PIN */
+    fun setScramblePinpadEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SCRAMBLE_PINPAD_ENABLED, enabled).apply()
+    }
+
+    /** Kiểm tra xáo trộn bàn phím số có được bật không (mặc định tắt) */
+    fun isScramblePinpadEnabled(): Boolean {
+        return prefs.getBoolean(KEY_SCRAMBLE_PINPAD_ENABLED, false)
     }
 
     /** Đổi mã PIN bảo mật */

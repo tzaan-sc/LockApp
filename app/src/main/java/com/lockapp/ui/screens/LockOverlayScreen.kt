@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
@@ -52,6 +52,7 @@ fun LockOverlayScreen(
     appPackage: String,
     appIcon: Drawable?,
     isBiometricAvailable: Boolean,
+    isScramblePinpadEnabled: Boolean = false,
     onVerifyPin: (String) -> Boolean,
     onUnlockSuccess: () -> Unit,
     onWrongPin: (Int) -> Unit,
@@ -65,6 +66,14 @@ fun LockOverlayScreen(
     val shakeOffset = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+
+    // Danh sách 10 số (0-9): nếu bật xáo trộn thì shuffle ngẫu nhiên
+    var shuffledDigits by remember(isScramblePinpadEnabled) {
+        mutableStateOf(
+            if (isScramblePinpadEnabled) (0..9).map { it.toString() }.shuffled()
+            else (1..9).map { it.toString() } + listOf("0")
+        )
+    }
 
     val maxPinLength = 4
 
@@ -101,6 +110,10 @@ fun LockOverlayScreen(
             delay(1200)
             pin = ""
             isError = false
+            // Đảo vị trí phím ngẫu nhiên lại sau mỗi lần nhập sai nếu bật scramble
+            if (isScramblePinpadEnabled) {
+                shuffledDigits = (0..9).map { it.toString() }.shuffled()
+            }
         }
     }
 
@@ -256,9 +269,9 @@ fun LockOverlayScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val rows = listOf(
-                        listOf("1", "2", "3"),
-                        listOf("4", "5", "6"),
-                        listOf("7", "8", "9")
+                        shuffledDigits.subList(0, 3),
+                        shuffledDigits.subList(3, 6),
+                        shuffledDigits.subList(6, 9)
                     )
 
                     for (row in rows) {
@@ -274,7 +287,7 @@ fun LockOverlayScreen(
                         }
                     }
 
-                    // Hàng cuối: Vân tay | 0 | Xóa
+                    // Hàng cuối: Vân tay | Phím số thứ 10 | Xóa
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(24.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -291,15 +304,16 @@ fun LockOverlayScreen(
                             Spacer(modifier = Modifier.size(72.dp))
                         }
 
-                        // Phím 0
+                        // Phím số thứ 10 (mặc định là 0 nếu không xáo trộn)
+                        val bottomDigit = shuffledDigits.getOrNull(9) ?: "0"
                         KeypadButton(
-                            text = "0",
-                            onClick = { onNumberClick("0") }
+                            text = bottomDigit,
+                            onClick = { onNumberClick(bottomDigit) }
                         )
 
                         // Phím xóa
                         KeypadIconButton(
-                            icon = Icons.Default.Backspace,
+                            icon = Icons.AutoMirrored.Filled.Backspace,
                             contentDescription = "Xóa",
                             tint = Color(0xFF94A3B8),
                             onClick = { onDeleteClick() }

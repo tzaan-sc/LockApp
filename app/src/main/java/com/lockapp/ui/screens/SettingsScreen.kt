@@ -47,6 +47,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
 
     var isBiometricEnabled by remember { mutableStateOf(repairModeManager.isBiometricEnabled()) }
+    var isScramblePinpadEnabled by remember { mutableStateOf(repairModeManager.isScramblePinpadEnabled()) }
     var isCameraEnabled by remember { mutableStateOf(repairModeManager.isCameraCaptureEnabled()) }
     var isDeviceAdminActive by remember { mutableStateOf(PermissionHelper.isDeviceAdminActive(context)) }
     var isUsbDebuggingOn by remember { mutableStateOf(PermissionHelper.isUsbDebuggingEnabled(context)) }
@@ -130,6 +131,17 @@ fun SettingsScreen(
                 onCheckedChange = { checked ->
                     isBiometricEnabled = checked
                     repairModeManager.setBiometricEnabled(checked)
+                }
+            )
+
+            SettingsSwitchItem(
+                icon = Icons.Outlined.Shuffle,
+                title = "Xáo trộn bàn phím số (Scramble Pinpad)",
+                subtitle = "Đảo ngẫu nhiên vị trí các số 0-9 khi mở khóa để chống nhìn trộm mã PIN",
+                checked = isScramblePinpadEnabled,
+                onCheckedChange = { checked ->
+                    isScramblePinpadEnabled = checked
+                    repairModeManager.setScramblePinpadEnabled(checked)
                 }
             )
 

@@ -48,6 +48,7 @@ class MainActivity : FragmentActivity() {
                             appPackage = packageName,
                             appIcon = ContextCompat.getDrawable(this, R.mipmap.ic_launcher),
                             isBiometricAvailable = BiometricAuthHelper.isBiometricAvailable(this) && repairModeManager.isBiometricEnabled(),
+                            isScramblePinpadEnabled = repairModeManager.isScramblePinpadEnabled(),
                             onVerifyPin = { pin ->
                                 repairModeManager.verifyPin(pin)
                             },

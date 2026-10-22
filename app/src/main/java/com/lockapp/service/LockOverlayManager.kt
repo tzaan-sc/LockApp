@@ -98,6 +98,7 @@ class LockOverlayManager private constructor(private val context: Context) {
                             appPackage = packageName,
                             appIcon = appIcon,
                             isBiometricAvailable = BiometricAuthHelper.isBiometricAvailable(context),
+                            isScramblePinpadEnabled = repairModeManager.isScramblePinpadEnabled(),
                             onVerifyPin = { pin ->
                                 repairModeManager.verifyPin(pin)
                             },
