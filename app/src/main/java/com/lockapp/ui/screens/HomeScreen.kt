@@ -231,6 +231,7 @@ fun HomeScreen(
                                 repairModeManager.deactivateRepairMode()
                                 isRepairMode = false
                                 showDeactivatePinDialog = false
+                                startLockService(context)
                             } else {
                                 deactivatePinError = "Mã PIN không đúng"
                                 IntruderCaptureManager.getInstance(context).vibrateOnError()
