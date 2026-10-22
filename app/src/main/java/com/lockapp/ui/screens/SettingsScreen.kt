@@ -49,6 +49,8 @@ fun SettingsScreen(
     var isBiometricEnabled by remember { mutableStateOf(repairModeManager.isBiometricEnabled()) }
     var isScramblePinpadEnabled by remember { mutableStateOf(repairModeManager.isScramblePinpadEnabled()) }
     var isCameraEnabled by remember { mutableStateOf(repairModeManager.isCameraCaptureEnabled()) }
+    var captureThreshold by remember { mutableIntStateOf(repairModeManager.getCaptureThreshold()) }
+    var showThresholdDialog by remember { mutableStateOf(false) }
     var isDeviceAdminActive by remember { mutableStateOf(PermissionHelper.isDeviceAdminActive(context)) }
     var isUsbDebuggingOn by remember { mutableStateOf(PermissionHelper.isUsbDebuggingEnabled(context)) }
 
@@ -160,6 +162,25 @@ fun SettingsScreen(
                     repairModeManager.setCameraCaptureEnabled(checked)
                 }
             )
+
+            if (isCameraEnabled) {
+                val thresholdSubtitle = when (captureThreshold) {
+                    0 -> "Chụp ngay khi vừa chạm mở app (Có thể chụp cả chính chủ)"
+                    1 -> "Sau 1 lần sai PIN (Khuyên dùng - Không chụp oan)"
+                    2 -> "Sau 2 lần sai PIN (Tránh bấm nhầm 1 lần)"
+                    3 -> "Sau 3 lần sai PIN (Kiên nhẫn hơn)"
+                    else -> "Sau $captureThreshold lần sai PIN"
+                }
+
+                SettingsActionItem(
+                    icon = Icons.Outlined.Timer,
+                    title = "Số lần sai PIN mới chụp ảnh",
+                    subtitle = thresholdSubtitle,
+                    onClick = {
+                        showThresholdDialog = true
+                    }
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -411,6 +432,60 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDisableAdminPinDialog = false }) {
+                    Text("Đóng")
+                }
+            }
+        )
+    }
+
+    // === DIALOG CHỌN SỐ LẦN SAI PIN MỚI CHỤP ẢNH ===
+    if (showThresholdDialog) {
+        val options = listOf(
+            1 to "Sau 1 lần sai PIN (Khuyên dùng - Không chụp oan)",
+            2 to "Sau 2 lần sai PIN (Tránh chụp khi lỡ bấm nhầm 1 lần)",
+            3 to "Sau 3 lần sai PIN (Kiên nhẫn hơn)",
+            0 to "Chụp ngay khi vừa chạm mở app (Tối đa, chụp cả chính chủ)"
+        )
+        AlertDialog(
+            onDismissRequest = { showThresholdDialog = false },
+            title = { Text("Số lần sai PIN mới chụp ảnh", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    options.forEach { (value, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    captureThreshold = value
+                                    repairModeManager.setCaptureThreshold(value)
+                                    showThresholdDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = captureThreshold == value,
+                                onClick = {
+                                    captureThreshold = value
+                                    repairModeManager.setCaptureThreshold(value)
+                                    showThresholdDialog = false
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                fontWeight = if (captureThreshold == value) FontWeight.Bold else FontWeight.Normal,
+                                color = if (captureThreshold == value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showThresholdDialog = false }) {
                     Text("Đóng")
                 }
             }

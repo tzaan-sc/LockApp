@@ -107,12 +107,15 @@ class LockOverlayManager private constructor(private val context: Context) {
                             },
                             onWrongPin = { attemptCount ->
                                 IntruderCaptureManager.getInstance(context).vibrateOnError()
-                                IntruderCaptureManager.getInstance(context).captureIntruder(
-                                    targetAppPackage = packageName,
-                                    targetAppName = appName,
-                                    wrongAttempts = attemptCount,
-                                    note = "Nhập sai PIN lần thứ $attemptCount"
-                                )
+                                val threshold = repairModeManager.getCaptureThreshold()
+                                if (threshold == 0 || attemptCount >= threshold) {
+                                    IntruderCaptureManager.getInstance(context).captureIntruder(
+                                        targetAppPackage = packageName,
+                                        targetAppName = appName,
+                                        wrongAttempts = attemptCount,
+                                        note = "Nhập sai PIN lần thứ $attemptCount"
+                                    )
+                                }
                             },
                             onBiometricClick = {
                                 val intent = Intent(context, BiometricPromptActivity::class.java).apply {

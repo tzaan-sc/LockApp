@@ -177,17 +177,19 @@ class LockAccessibilityService : AccessibilityService() {
                 }
 
                 if (isLocked) {
-                    Log.d(TAG, "App $packageName is locked! Showing overlay and taking silent photo")
+                    Log.d(TAG, "App $packageName is locked! Showing overlay")
 
                     // 1. Hiển thị màn hình khóa Overlay
                     overlayManager.showLockOverlay(packageName)
 
-                    // 2. Tự động chụp ảnh ngầm camera trước
-                    captureManager.captureIntruder(
-                        targetAppPackage = packageName,
-                        wrongAttempts = 0,
-                        note = "Mở app khi đang bảo vệ"
-                    )
+                    // 2. Chỉ tự động chụp ảnh ngay khi chạm mở app nếu người dùng cấu hình ngưỡng = 0
+                    if (repairModeManager.getCaptureThreshold() == 0) {
+                        captureManager.captureIntruder(
+                            targetAppPackage = packageName,
+                            wrongAttempts = 0,
+                            note = "Mở app khi đang bảo vệ"
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking app lock status: ${e.message}", e)

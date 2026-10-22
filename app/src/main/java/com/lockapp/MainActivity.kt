@@ -57,12 +57,15 @@ class MainActivity : FragmentActivity() {
                             },
                             onWrongPin = { attemptCount ->
                                 IntruderCaptureManager.getInstance(this).vibrateOnError()
-                                IntruderCaptureManager.getInstance(this).captureIntruder(
-                                    targetAppPackage = packageName,
-                                    targetAppName = getString(R.string.app_name),
-                                    wrongAttempts = attemptCount,
-                                    note = "Cố gắng mở LockApp sai PIN lần $attemptCount"
-                                )
+                                val threshold = repairModeManager.getCaptureThreshold()
+                                if (threshold == 0 || attemptCount >= threshold) {
+                                    IntruderCaptureManager.getInstance(this).captureIntruder(
+                                        targetAppPackage = packageName,
+                                        targetAppName = getString(R.string.app_name),
+                                        wrongAttempts = attemptCount,
+                                        note = "Cố gắng mở LockApp sai PIN lần $attemptCount"
+                                    )
+                                }
                             },
                             onBiometricClick = {
                                 showBiometricPrompt()

@@ -20,6 +20,7 @@ class RepairModeManager(private val context: Context) {
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_CAMERA_CAPTURE_ENABLED = "camera_capture_enabled"
         private const val KEY_SCRAMBLE_PINPAD_ENABLED = "scramble_pinpad_enabled"
+        private const val KEY_CAPTURE_WRONG_ATTEMPTS_THRESHOLD = "capture_wrong_attempts_threshold"
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -117,6 +118,16 @@ class RepairModeManager(private val context: Context) {
     /** Kiểm tra xáo trộn bàn phím số có được bật không (mặc định tắt) */
     fun isScramblePinpadEnabled(): Boolean {
         return prefs.getBoolean(KEY_SCRAMBLE_PINPAD_ENABLED, false)
+    }
+
+    /** Lấy số lần nhập sai PIN mới chụp ảnh (0: chụp ngay khi vừa mở app, 1: sau 1 lần sai, 2: sau 2 lần, 3: sau 3 lần. Mặc định: 1) */
+    fun getCaptureThreshold(): Int {
+        return prefs.getInt(KEY_CAPTURE_WRONG_ATTEMPTS_THRESHOLD, 1)
+    }
+
+    /** Cài đặt số lần nhập sai PIN mới chụp ảnh */
+    fun setCaptureThreshold(threshold: Int) {
+        prefs.edit().putInt(KEY_CAPTURE_WRONG_ATTEMPTS_THRESHOLD, threshold).apply()
     }
 
     /** Đổi mã PIN bảo mật */
