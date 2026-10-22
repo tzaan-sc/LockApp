@@ -1,6 +1,8 @@
 package com.lockapp.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.lockapp.camera.IntruderCaptureManager
@@ -70,6 +72,22 @@ class LockAccessibilityService : AccessibilityService() {
         Log.d(TAG, "LockAccessibilityService connected successfully")
     }
 
+    // Cache danh sách package màn hình chính (Launcher)
+    private val knownLauncherPackages = mutableSetOf(
+        "com.android.launcher",
+        "com.android.launcher3",
+        "com.google.android.apps.nexuslauncher",
+        "com.sec.android.app.launcher",
+        "com.miui.home",
+        "com.oppo.launcher",
+        "com.coloros.home",
+        "com.bbk.launcher2",
+        "com.vivo.launcher",
+        "com.huawei.android.launcher",
+        "com.teslacoilsw.launcher",
+        "com.microsoft.launcher"
+    )
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
@@ -80,11 +98,23 @@ class LockAccessibilityService : AccessibilityService() {
                 // Bỏ qua chính app LockApp
                 if (packageName == applicationContext.packageName) return
 
-                // Bỏ qua các system UI (bàn phím, status bar...)
+                // Bỏ qua các system UI (bàn phím, status bar, cấp quyền...)
                 if (isSystemUiPackage(packageName)) return
 
+                // Khi về màn hình chính (Launcher):
+                // 1. Không bao giờ khóa màn hình chính
+                // 2. Lập tức khóa lại app vừa mở trước đó (reset phiên tạm)
+                if (isLauncherPackage(packageName)) {
+                    if (tempUnlockedPackage != null) {
+                        Log.d(TAG, "Returned to home launcher, resetting unlocked session for $tempUnlockedPackage")
+                        tempUnlockedPackage = null
+                    }
+                    lastPackageName = packageName
+                    return
+                }
+
                 // Nếu chuyển sang một app khác không phải app đã mở khóa, reset phiên tạm
-                if (tempUnlockedPackage != null && packageName != tempUnlockedPackage && !isLauncherPackage(packageName)) {
+                if (tempUnlockedPackage != null && packageName != tempUnlockedPackage) {
                     Log.d(TAG, "Navigated away from unlocked app $tempUnlockedPackage to $packageName, resetting session")
                     tempUnlockedPackage = null
                 }
@@ -142,18 +172,30 @@ class LockAccessibilityService : AccessibilityService() {
             "com.google.android.inputmethod.latin",
             "com.samsung.android.honeyboard",
             "com.sec.android.inputmethod",
+            "com.vng.inputmethod.labankey",
             "com.android.packageinstaller",
-            "com.google.android.packageinstaller"
+            "com.google.android.packageinstaller",
+            "com.google.android.permissioncontroller",
+            "com.android.permissioncontroller"
         )
     }
 
     private fun isLauncherPackage(packageName: String): Boolean {
-        return packageName in listOf(
-            "com.android.launcher",
-            "com.android.launcher3",
-            "com.google.android.apps.nexuslauncher",
-            "com.sec.android.app.launcher"
-        )
+        if (knownLauncherPackages.contains(packageName)) return true
+
+        return try {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+            }
+            val resolveInfos = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            val isLauncher = resolveInfos.any { it.activityInfo?.packageName == packageName }
+            if (isLauncher) {
+                knownLauncherPackages.add(packageName)
+            }
+            isLauncher
+        } catch (_: Exception) {
+            false
+        }
     }
 
     override fun onInterrupt() {
