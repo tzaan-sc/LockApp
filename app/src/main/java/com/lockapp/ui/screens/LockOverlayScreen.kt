@@ -1,6 +1,8 @@
 package com.lockapp.ui.screens
 
 import android.graphics.drawable.Drawable
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
@@ -65,6 +67,13 @@ fun LockOverlayScreen(
     val haptic = LocalHapticFeedback.current
 
     val maxPinLength = 4
+
+    // Tự động thoát về Home nếu người dùng bấm phím Back hoặc vuốt cử chỉ Back
+    LocalOnBackPressedDispatcherOwner.current?.let {
+        BackHandler {
+            onExitToHome()
+        }
+    }
 
     fun triggerWrongPinAnimation() {
         wrongAttemptCount++
